@@ -1,0 +1,24 @@
+{
+  "name": "leep-node",
+  "version": "1.0.0",
+  "description": "node-express-exploratory ========================",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jasonray/leep-node.git"
+  },
+  "author": "j.ray",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/jasonray/leep-node/issues"
+  },
+  "dependencies": {
+    "morgan": "~1.0.0",
+    "express": "~4.1.0",
+    "bunyan": "~0.22.3",
+    "restler": "~3.2.2"
+  }
+}
