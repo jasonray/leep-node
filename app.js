@@ -11,8 +11,7 @@ var logger = require('bunyan').createLogger({
 var morgan = require('morgan');
 var morganLogger = morgan('dev');
 
-var rest = require('restler');
-
+var http = require('http');
 
 // log the request to stdout
 app.use(morganLogger);
@@ -25,30 +24,35 @@ app.use('/api', activeCallFilterModule.activeCallFilter());
 app.use('/api', function(req, res, next) {
 	logger.info('PEP invoking PDP');
 
-	rest.get("http://127.0.0.1:3000/?delay=500")
-		.on('complete', function(result, response) {
-			if (result instanceof Error) {
-				logger.info("Got failed response from PDP: " + response.statusCode);
-				next();
-			} else {
-				logger.info("Got response from PDP: " + response.statusCode);
-				next();
-			}
-		});
+	http.get({
+		hostname: "localhost",
+		port: 3000,
+		path: "/?delay=500",
+		agent: false
+	}, function(response) {
+		logger.info("Got response from PDP: " + response.statusCode);
+		next();
+	}).on('error', function(e) {
+		logger.info('failed to contact PDP, will fail this request');
+		res.status(500).end();
+	});
 });
 
 app.get('/api/patientdata', function(req, res, next) {
 	logger.info('retrieve data from repo');
 
-	rest.get("http://127.0.0.1:3000/?delay=2000")
-		.on('complete', function(result, response) {
-			if (result) {
-				res.statusCode(500).end();
-			} else {
-				logger.info("Got response from repo: " + response.statusCode);
-				res.end('data');
-			}
-		});
+	http.get({
+		hostname: "localhost",
+		port: 3000,
+		path: "/?delay=2000",
+		agent: false
+	}, function(response) {
+		logger.info("Got response from repo: " + response.statusCode);
+		res.end('data');
+	}).on('error', function(e) {
+		logger.info('failed to contact data, will fail this request');
+		res.status(500).end();
+	});
 });
 
 app.get('/admin/stats', activeCallFilterModule.activeCallResource());
