@@ -1,24 +1,27 @@
+// this library is for parsing command line params
+// this is used in this project for setting the port
 var pargv = require('minimist')(process.argv.splice(2));
 
+// initialize the application instance
 var express = require('express');
 var app = express();
-var httpPort = pargv.p || 8888;
 
 var logger = require('bunyan').createLogger({
 	name: "server"
 });
 
-var morgan = require('morgan');
-var morganLogger = morgan('dev');
-
+// initialize an http instance that we can use
+// for invoking other services
 var http = require('http');
 
 // log the request to stdout
+var morganLogger = require('morgan').morgan('dev');
 app.use(morganLogger);
 
-// keep track of stats
-var activeCallFilterModule = require('./lib/request-filters/active-call-counter');
-app.use('/api', activeCallFilterModule.activeCallFilter());
+// keep track of usage stats
+var metrics = require('statman');
+app.use('/api', metrics.httpFilters.metricCollectionFilter);
+app.use('/public', metrics.httpFilters.metricCollectionFilter);
 
 // represents calling to the PDP with 500ms delay
 app.use('/api', function(req, res, next) {
@@ -57,6 +60,17 @@ app.get('/api/patientdata', function(req, res, next) {
 
 app.get('/admin/stats', activeCallFilterModule.activeCallResource());
 
+// initialize the http listener 
+// for the main service
+var httpPort = pargv.p || 8888;
 app.listen(httpPort, function() {
 	logger.info("now listening on %s", httpPort);
+});
+
+// initialize a second app
+// to use for a admin service on a separate port
+var adminapp = express();
+adminapp.get('/admin/stats', metrics.httpFilters.metricOutputResource);
+adminapp.listen(adminHttpPort, function() {
+	logger.info("admin services now listening on %s", adminHttpPort);
 });
