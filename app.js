@@ -15,7 +15,7 @@ var logger = require('bunyan').createLogger({
 var http = require('http');
 
 // log the request to stdout
-var morganLogger = require('morgan').morgan('dev');
+var morganLogger = require('morgan')('dev');
 app.use(morganLogger);
 
 // keep track of usage stats
@@ -24,22 +24,7 @@ app.use('/api', metrics.httpFilters.metricCollectionFilter);
 app.use('/public', metrics.httpFilters.metricCollectionFilter);
 
 // represents calling to the PDP with 500ms delay
-app.use('/api', function(req, res, next) {
-	logger.info('PEP invoking PDP');
-
-	http.get({
-		hostname: "localhost",
-		port: 3000,
-		path: "/?delay=500",
-		agent: false
-	}, function(response) {
-		logger.info("Got response from PDP: " + response.statusCode);
-		next();
-	}).on('error', function(e) {
-		logger.info('failed to contact PDP, will fail this request');
-		res.status(500).end();
-	});
-});
+app.use('/api', require('./lib/pep').pepfilter);
 
 app.get('/api/patientdata', function(req, res, next) {
 	logger.info('retrieve data from repo');
@@ -58,8 +43,6 @@ app.get('/api/patientdata', function(req, res, next) {
 	});
 });
 
-app.get('/admin/stats', activeCallFilterModule.activeCallResource());
-
 // initialize the http listener 
 // for the main service
 var httpPort = pargv.p || 8888;
@@ -69,6 +52,7 @@ app.listen(httpPort, function() {
 
 // initialize a second app
 // to use for a admin service on a separate port
+var adminHttpPort = 8889;
 var adminapp = express();
 adminapp.get('/admin/stats', metrics.httpFilters.metricOutputResource);
 adminapp.listen(adminHttpPort, function() {
